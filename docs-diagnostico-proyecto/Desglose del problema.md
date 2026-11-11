@@ -38,8 +38,8 @@ Ejemplo concreto:
 
 | Local | VMA | % variable | Ventas del mes | ¿Qué paga? |
 | :--- | :--- | :--- | :--- | :--- |
-| Joyería | $1.000 | 9% | $20.000 | VMA ($1.000) + 9% de $20.000 ($1.800) = **$2.800** |
-| Electrónica | $1.000 | 4% | $20.000 | VMA ($1.000) + 4% de $20.000 ($800) = **$1.800** |
+| Joyería | $1.000 | 9% | $20.000 | MAX($1.000; 9% × $20.000 = $1.800) = **$1.800** |
+| Electrónica | $1.000 | 4% | $20.000 | MAX($1.000; 4% × $20.000 = $800) = **$1.000** |
 
 La joyería paga más porque su rubro tiene márgenes altos y el dueño del shopping quiere capturar más de esa ganancia. Por eso el texto dice *"porcentajes de renta variable diferenciados por rubro"*.
 
@@ -451,16 +451,16 @@ Para que se vea cómo encajan los cuatro subsistemas:
 
 | ID | Pregunta | Opciones | Decisión | Justificación |
 | :--- | :--- | :--- | :--- | :--- |
-| D-01 | ¿Cómo se combina el VMA con la renta variable? | (a) `MAX(VMA, Ventas × %)` (b) `VMA + MAX(0, (Ventas × %) − VMA)` | | |
-| D-02 | ¿El porcentaje escalonado se aplica sobre el total de ventas o solo sobre el excedente del tramo? | (a) Sobre total (b) Por tramos sobre excedente | | |
-| D-03 | Si el auditor detecta ventas omitidas, ¿se rehace la liquidación sobre la venta auditada o solo se aplica multa? | (a) Rehacer + multa (b) Solo multa | | |
-| D-04 | ¿Qué atributo define "local menor" en el modelo? | (a) Booleano `es_ancla` (b) Rango de m² (c) Categoría contractual | | |
-| D-05 | ¿La redistribución del excedente de caps se hace en una pasada o iterativamente? | (a) Una pasada (b) Iterativa hasta convergencia | | |
-| D-06 | ¿Qué pasa si la redistribución no converge? | (a) Se corta en N iteraciones y alerta (b) Se fuerza el último valor (c) Otro | | |
-| D-07 | ¿El fondo de promoción se calcula como % de ventas, monto fijo por m², o combinación? | (a) % ventas (b) Fijo por m² (c) Combinación | | |
-| D-08 | ¿Qué mecanismo de rendición de cuentas debe tener el fondo de promoción? | (a) Reporte descargable (b) Vista por locatario (c) Ambos | | |
-| D-09 | ¿La liquidación mensual es definitiva o provisional con ajuste anual (true-up)? | (a) Definitiva (b) Provisional + ajuste | | |
-| D-10 | ¿Cómo se maneja la indexación si el índice se publica a destiempo? | (a) Nota de débito/crédito retroactiva (b) Se espera al mes siguiente | | |
+| D-01 | ¿Cómo se combina el VMA con la renta variable? | (a) `MAX(VMA, Ventas × %)` (b) `VMA + MAX(0, (Ventas × %) − VMA)` | **(a)** `MAX(VMA, Ventas × %)` | Modelo dual estándar de renta variable (*overage rent*): el locatario paga el mayor entre el piso VMA y el porcentaje sobre ventas. Equivale a `VMA + MAX(0, (Ventas × %) − VMA)` con breakpoint natural `BP = VMA / %`, por lo que (a) y (b) describen la misma fórmula. Evita cobrar dos veces el tramo cubierto por el VMA y alinea el riesgo entre las partes (F-02). |
+| D-02 | ¿El porcentaje escalonado se aplica sobre el total de ventas o solo sobre el excedente del tramo? | (a) Sobre total (b) Por tramos sobre excedente | **(b)** Por tramos sobre excedente | El escalonamiento marginal grava cada tramo solo sobre su excedente (`Σ rᵢ·MAX(0, MIN(V,bᵢ) − bᵢ₋₁)`), sin saltos artificiales al cambiar de tramo. Es más justo y predecible para el locatario que aplicar una tasa plana sobre el total (F-01, F-04). |
+| D-03 | Si el auditor detecta ventas omitidas, ¿se rehace la liquidación sobre la venta auditada o solo se aplica multa? | (a) Rehacer + multa (b) Solo multa | **(a)** Rehacer + multa | La renta variable omitida es el daño económico principal; la multa es una sanción adicional disuasoria. Recalcular con la venta auditada recupera el ingreso y deja trazabilidad contable, mientras que la multa sola no repara el perjuicio (F-02, F-04). |
+| D-04 | ¿Qué atributo define "local menor" en el modelo? | (a) Booleano `es_ancla` (b) Rango de m² (c) Categoría contractual | **(a)** Booleano `es_ancla` | El tope de expensas es una condición contractual, no una consecuencia del tamaño. Modelarlo como atributo explícito del contrato evita inferencias frágiles por m² y permite excepciones puntuales (F-06). |
+| D-05 | ¿La redistribución del excedente de caps se hace en una pasada o iterativamente? | (a) Una pasada (b) Iterativa hasta convergencia | **(b)** Iterativa hasta convergencia | Al redistribuir el excedente, un local puede superar su propio tope si lo tuviera, generando nuevo excedente. Solo la iteración hasta `|Δ| < tolerancia` garantiza el equilibrio del reparto (F-11, F-12). |
+| D-06 | ¿Qué pasa si la redistribución no converge? | (a) Se corta en N iteraciones y alerta (b) Se fuerza el último valor (c) Otro | **(a)** Se corta en N iteraciones y alerta | Con topes fijos y coeficientes positivos el proceso converge si queda al menos un local sin cap. Si `Σcaps < Gasto_Total` no existe solución: se corta en `N` iteraciones configurables, se congela el último estado y se alerta para decisión manual (F-12). |
+| D-07 | ¿El fondo de promoción se calcula como % de ventas, monto fijo por m², o combinación? | (a) % ventas (b) Fijo por m² (c) Combinación | **(c)** Combinación configurable | Los contratos reales combinan un porcentaje de ventas con un monto fijo por m². Parametrizar ambas componentes (permitiendo cero en cada una) cubre los casos sin rehacer el motor (F-05). |
+| D-08 | ¿Qué mecanismo de rendición de cuentas debe tener el fondo de promoción? | (a) Reporte descargable (b) Vista por locatario (c) Ambos | **(c)** Ambos | La transparencia del fondo exige rendición descargable para auditoría y vista individual por locatario. Ambos canales reutilizan el mismo dato de recaudación y egreso (F-05). |
+| D-09 | ¿La liquidación mensual es definitiva o provisional con ajuste anual (true-up)? | (a) Definitiva (b) Provisional + ajuste | **(b)** Provisional + ajuste | Los gastos e índices reales se conocen después del cierre. La provisión mensual con true-up anual evita reliquidaciones masivas y absorbe desvíos (F-02, F-03). |
+| D-10 | ¿Cómo se maneja la indexación si el índice se publica a destiempo? | (a) Nota de débito/crédito retroactiva (b) Se espera al mes siguiente | **(a)** Nota de débito/crédito retroactiva | Si el índice se publica a destiempo, la diferencia debe reconocerse en el período de origen mediante nota retroactiva; esperar al mes siguiente distorsiona el canon y dificulta la auditoría (F-03). |
 
 ### 4.2 Profundizaciones técnicas opcionales (no bloquean el análisis)
 
@@ -486,31 +486,112 @@ Para que se vea cómo encajan los cuatro subsistemas:
 
 ## 5. Lógica del Negocio
 
-> **Instrucciones para el equipo:** esta sección se llena **después** de cerrar las decisiones de la sección 4. Cada regla debe ser una frase verificable, con ID, y con fuente citada (sección 7). Estas reglas son las que después se traducen a entidades, endpoints y tests.
+> **Instrucciones para el equipo:** esta sección se llena **después** de cerrar las decisiones de la sección 4. Cada regla es una frase verificable, con ID, fórmula, excepciones y fuente citada (sección 7). Estas reglas son las que después se traducen a entidades, endpoints y tests.
+
+> **Convenciones:** `V` = ventas netas auditadas del mes; `%r` = porcentaje del rubro o tramo; `G` = gasto común total del período; `Cᵢ` = coeficiente compuesto normalizado del local `i`; `capᵢ` = tope contractual de expensas (`∞` si no tiene). Todas las magnitudes monetarias se expresan con la precisión contable de 2 decimales (ver RN-16).
 
 ### 5.1 Reglas de cálculo del alquiler
 
-- **RN-01:** _(pendiente — depende de D-01)_
-- **RN-02:** _(pendiente — depende de D-02)_
-- **RN-03:** _(pendiente — indexación y escalonamiento)_
+- **RN-01 (D-01) — Canon de alquiler dual.** El canon mensual de un local activo es el mayor entre su VMA vigente y el porcentaje variable aplicado sobre sus ventas netas auditadas: `Canon = MAX(VMA_vigente, %r × V)`.
+  - Si `%r × V ≤ VMA_vigente`, el local paga solo el VMA (sin excedente porcentual).
+  - Si `%r × V > VMA_vigente`, el local paga `%r × V` (el excedente absorbe el VMA; no se suma dos veces).
+  - *Equivalencia:* `MAX(VMA, %r×V) = VMA + MAX(0, %r×V − VMA)`, donde el breakpoint natural es `BP = VMA / %r`.
+  - **Excepciones:** local en período de gracia → `Canon = 0`; local vacante o contrato no vigente → no genera canon.
+  - **Fuente:** F-02.
+
+- **RN-02 (D-02) — Renta variable escalonada marginal.** Si el contrato define tramos de facturación `[bᵢ₋₁, bᵢ]` con tasas `rᵢ`, la renta variable se calcula gravando cada tramo solo sobre su excedente: `RentaVar = Σᵢ rᵢ × MAX(0, MIN(V, bᵢ) − bᵢ₋₁)`. Si no hay escalas, `RentaVar = %r × V`. El resultado reemplaza a `%r × V` dentro de RN-01.
+  - **Fuente:** F-01, F-04.
+
+- **RN-03 (D-10) — Indexación y escalonamiento del VMA.** El VMA vigente se actualiza según la cláusula del contrato: `VMA_t = VMA₀ × Π(1 + π)` para indexación por inflación, o `VMA_t = VMA_USD × TC_t` para moneda dura.
+  - Si el índice o tipo de cambio se publica **después** del cierre del período, se aplica `VMA_t` al período de origen mediante **nota de débito/crédito retroactiva** por la diferencia `(VMA_t − VMA_provisorio) × meses_afectados`.
+  - Un período cerrado no se modifica sin nota formal y registro inmutable (RN-14).
+  - **Fuente:** F-03.
 
 ### 5.2 Reglas de auditoría de ventas
 
-- **RN-04:** _(pendiente — depende de D-03)_
-- **RN-05:** _(pendiente — definición contractual de "ventas")_
-- **RN-06:** _(pendiente — umbral de anomalía y multa)_
+- **RN-04 (D-03) — Recalculo ante ventas omitidas.** Si una auditoría comprueba ventas omitidas, se recalculan las ventas del período `V_final = V_declarada + V_omitida` y se re-emite la liquidación con la diferencia a favor del centro comercial **y** se aplica la multa contractual. La multa **no** reemplaza la renta variable omitida.
+  - **Excepción:** diferencia no dolosa dentro de la tolerancia contractual → solo ajuste, sin multa.
+  - **Fuente:** F-02, F-04.
+
+- **RN-05 — Definición de ventas computables.** Las ventas netas se calculan como `V = Ventas_Brutas − IVA_e_impuestos_indirectos − Devoluciones − Anulaciones − Consumos_Empleados`. Se incluyen las ventas omnicanal retiradas en tienda (*click & collect*) según el criterio contractual; se excluyen las ventas online no retiradas en el local.
+  - **Fuente:** F-02, F-06, F-08.
+
+- **RN-06 — Detección de anomalías y multa.** Un local se marca sospechoso cuando `|Z_robusto| > umbral` (por defecto `3.0`, configurable) respecto de su rubro en ventas/m² y/o en el cruce con el flujo peatonal del pasillo, con `Z_robusto = 0.6745 × (x − mediana(X)) / MAD(X)`. La marca genera una orden de auditoría. Si se confirma fraude: `Multa = MAX(multa_fija, tasa_multa × V_omitida)` según contrato.
+  - **Fuente:** F-09, F-10, F-13, F-14.
 
 ### 5.3 Reglas de prorrateo de expensas
 
-- **RN-07:** _(pendiente — depende de D-04, D-05, D-06)_
-- **RN-08:** _(pendiente — coeficientes de reparto)_
-- **RN-09:** _(pendiente — true-up, D-09)_
+- **RN-07 (D-04, D-05, D-06) — Prorrateo con redistribución iterativa de caps.** Sea `G` el gasto común total y `Cᵢ` el coeficiente normalizado (`Σᵢ Cᵢ = 1`). El reparto se resuelve por iteraciones sucesivas:
+  1. Inicializar el conjunto de locales con cap aplicado `K = ∅` y la expensa asignada `Eᵢ = G × Cᵢ` para todo local.
+  2. Para cada local `i ∉ K` con `Eᵢ > capᵢ`, incorporar `i` a `K` (se activa su tope).
+  3. Recalcular: para `i ∈ K`, `Eᵢ = capᵢ`; para `i ∉ K`, `Eᵢ = (G − Σ_(j∈K) capⱼ) × (Cᵢ / Σ_(j∉K) Cⱼ)`.
+  4. Repetir los pasos 2-3 hasta que ningún local sin cap supere su tope (o hasta `N` iteraciones configurables).
+  - Al converger, `Σᵢ Eᵢ = G` y ningún local paga más que su cap. Si se alcanza `N` sin converger, se congela el último estado, se registra una **alerta** y se bloquea la emisión definitiva hasta revisión manual.
+  - **Edge case:** si todos los locales tienen cap y `Σcapᵢ < G`, no existe solución; se alerta y el centro absorbe el remanente (o se aplica prorrateo forzado configurable).
+  - **Fuente:** F-07, F-11, F-12.
+
+- **RN-08 — Coeficiente compuesto de reparto.** `Cᵢ = (m²ᵢ / m²_total) × factor_ubicaciónᵢ × factor_consumoᵢ × factor_rubroᵢ`, normalizado para que `Σᵢ Cᵢ = 1`. Los factores correctores se parametrizan por nivel/ubicación, consumo energético y categoría comercial.
+  - **Fuente:** F-05, F-06.
+
+- **RN-09 (D-09) — Liquidación provisoria y true-up anual.** Durante el mes se factura una provisión `Provisionᵢ = G_proyectado × Cᵢ`. Al cierre anual: `Saldo_TrueUpᵢ = Gasto_Real_Asignadoᵢ − Σ Provisiones_Mensualesᵢ`; si `> 0` se emite nota de débito, si `< 0` nota de crédito, imputada a la siguiente liquidación.
+  - **Fuente:** F-02, F-03.
 
 ### 5.4 Reglas de cobranza y garantías
 
-- **RN-10:** _(pendiente — intereses punitorios)_
-- **RN-11:** _(pendiente — garantías de caución)_
-- **RN-12:** _(pendiente — fondo de promoción, D-07, D-08)_
+- **RN-10 — Intereses punitorios (simple).** `Interés = Monto_Vencido × Tasa_Diaria_Punitoria × Días_De_Retraso`, calculado desde el día siguiente al vencimiento hasta el pago efectivo. En el MVP el interés es simple (el compuesto queda como mejora futura, ver sección 6).
+  - **Fuente:** F-18.
+
+- **RN-11 — Ejecución de garantías de caución.** Si la mora supera `N` días o la deuda supera un umbral configurable, se ejecuta la garantía por `deuda + intereses + multas`, se registra el evento en el audit trail y se descuenta el monto ejecutado del saldo de la garantía.
+  - **Fuente:** F-04.
+
+- **RN-12 (D-07, D-08) — Fondo de promoción y rendición.** `Fondoᵢ = (%fondo × V) + (tarifa_fija × m²ᵢ)`, permitiendo que cualquiera de las dos componentes sea cero según contrato. El fondo se acumula en una cuenta segregada del fondo colectivo y se rinde mediante reporte descargable y vista individual por locatario, con detalle de ingresos y egresos del período.
+  - **Fuente:** F-05, F-06.
+
+### 5.5 Reglas transversales
+
+- **RN-13 — Idempotencia del motor de liquidación.** Ejecutar el cierre de un mismo período más de una vez produce el mismo resultado y no duplica cargos; cada corrida se identifica por `(contrato, período, versión_contrato, hash_insumos)`.
+  - **Fuente:** F-15.
+- **RN-14 — Audit trail inmutable.** Toda alta, modificación, recálculo, nota de débito/crédito y ejecución de garantía se registra en un log *append-only* de solo lectura con usuario, fecha, valor anterior y valor nuevo.
+  - **Fuente:** F-16.
+- **RN-15 — Versionado contractual y retroactividad.** Las adendas generan una nueva versión del contrato con vigencia propia; los recálculos retroactivos usan la versión vigente en el período de origen, nunca la versión actual.
+  - **Fuente:** F-17.
+- **RN-16 — Redondeo y moneda.** Los montos se almacenan con precisión decimal contable (2 decimales para importes, 4 para tasas) y se redondean solo al emitir la liquidación, usando redondeo bancario; la moneda y el tipo de cambio aplicable se toman del contrato (RN-03).
+  - **Fuente:** F-04.
+
+### 5.6 Matriz de trazabilidad de reglas
+
+| Regla | Decisión | Término del glosario | Fuente | Entidad / endpoint / test futuro |
+| :--- | :--- | :--- | :--- | :--- |
+| RN-01 | D-01 | Renta variable / Overage rent | F-02 | `Liquidacion.canon` / `POST /liquidaciones` / test dual |
+| RN-02 | D-02 | % diferenciado por rubro o escala | F-01, F-04 | `ContratoEscala` / test marginal |
+| RN-03 | D-10 | Escalonamiento del VMA | F-03 | `ContratoVersion.vma` / test de indexación tardía |
+| RN-04 | D-03 | Multas contractuales | F-02, F-04 | `Auditoria` / test recálculo + multa |
+| RN-05 | — | Definición contractual de "ventas" | F-02, F-06, F-08 | `VentaNeta` / test de exclusiones |
+| RN-06 | — | Z-Score robusto / anomalías | F-09, F-10, F-13, F-14 | `Sospecha` / test de outlier |
+| RN-07 | D-04, D-05, D-06 | Redistribución iterativa de caps | F-07, F-11, F-12 | `Prorrateo.caps` / test de convergencia y edge case |
+| RN-08 | — | Coeficiente de reparto | F-05, F-06 | `Coeficiente` / test de normalización |
+| RN-09 | D-09 | Liquidación provisoria vs. definitiva | F-02, F-03 | `TrueUp` / test de saldo |
+| RN-10 | — | Intereses punitorios | F-18 | `Interes` / test de días de mora |
+| RN-11 | — | Garantías de caución | F-04 | `Garantia` / test de ejecución |
+| RN-12 | D-07, D-08 | Fondo de promoción | F-05, F-06 | `Fondo` / test de rendición |
+| RN-13 | — | Idempotencia | F-15 | test de re-ejecución |
+| RN-14 | — | Audit Trail inmutable | F-16 | test de append-only |
+| RN-15 | — | Control de versiones | F-17 | test de retroactividad |
+| RN-16 | — | Precisión contable | F-04 | test de redondeo |
+
+### 5.7 Nota de cobertura respecto al enunciado
+
+> **Nota de análisis preliminar:** las reglas RN-01..RN-16 cubren el núcleo del desafío de `Proyecto a resolver.md` (motor dual, prorrateo iterativo de caps, detección de anomalías, indexación del VMA, períodos de gracia, multas, mora, garantías y fondo de promoción). Quedan **pendientes de formalizar** los siguientes puntos del enunciado, por no pertenecer al núcleo de cálculo:
+>
+> - **Llaves de ingreso pagaderas en cuotas** (Subsistema 1).
+> - **Tratamiento separado de Gastos Comunes Ordinarios vs. Extraordinarios** (Subsistema 3).
+> - **Conciliación cierre Z ↔ liquidación POS** como validación cruzada (Subsistema 2).
+> - **Distinción entre punto fijo y compra misteriosa**, y **workflow de cobranza** por estados (Subsistemas 2 y 4).
+> - **Permisos de obra nocturna** (Subsistema 4).
+>
+> **Matices a validar:** (a) la interpretación dual `MAX(VMA, %×V)` frente a la lectura literal del ejemplo "4% si supera el VMA"; (b) la conciliación entre "ventas brutas" y "ventas netas de impuestos"; (c) la inclusión de `factor_ancla` en el coeficiente de reparto.
+>
+> Se documentan aquí para preservar la trazabilidad con el enunciado. Si el alcance lo requiere, se formalizarán como RN-17..RN-21 al cerrar la fase de análisis.
 
 ---
 
@@ -535,17 +616,36 @@ Para que se vea cómo encajan los cuatro subsistemas:
 
 | ID | Fuente | Tipo | Términos o reglas que respalda |
 | :--- | :--- | :--- | :--- |
-| F-01 | | Artículo / Libro / Contrato modelo / Guía | |
-| F-02 | | | |
-| F-03 | | | |
+| F-01 | Ros, I. (2022). *Renta Variable Centro Comercial: Guía y Negociación*. | Guía / Artículo | Renta variable; porcentaje diferenciado por rubro (RN-02) |
+| F-02 | Bellhaven Real Estate. (2024). *Understanding Overage Rent in Retail Lease Agreements*. | Artículo | VMA, overage rent, definición de ventas, multas, true-up (RN-01, RN-04, RN-05, RN-09) |
+| F-03 | Avarbitraje. (2024). *La regulación del monto de los alquileres comerciales y el arbitraje*. | Artículo | Escalonamiento del VMA, liquidación provisoria/definitiva (RN-03, RN-09) |
+| F-04 | Asesores VE Global. (2024). *¿Qué ley regula los alquileres de locales comerciales en Venezuela?* | Artículo | Contratos, porcentajes por rubro, multas, garantías, precisión contable (RN-02, RN-04, RN-11, RN-16) |
+| F-05 | Ley de Regulación del Arrendamiento Inmobiliario para el Uso Comercial. Gaceta Oficial N° 40.418 (2014). | Ley | Gastos comunes, fondos de promoción, coeficientes, fondo colectivo (RN-08, RN-12) |
+| F-06 | International Council of Shopping Centers [ICSC]. (2023). *Glossary of Shopping Center Terms / Retail Real Estate Leasing Strategies / Omnichannel Retail Metrics*. | Guía / Estándar | Tienda ancla vs. local menor, tenant mix, omnicanal, fondo de marketing (RN-05, RN-08, RN-12) |
+| F-07 | Abog. Luis Marcano. (2016). *Arrendamiento de Locales y Centros Comerciales: gastos y sobrealquileres*. | Artículo | Tope contractual de expensas / cap (RN-07) |
+| F-08 | SENIAT. (2020). *Providencia Administrativa sobre Normas de Emisión de Facturas*. | Normativa | Cierre Z fiscal (RN-05) |
+| F-09 | SUDEBAN. (2023). *Normativas sobre Sistemas de Pago y POS*. | Normativa | Liquidación de tarjetas / POS (RN-06) |
+| F-10 | Chandola, V., Banerjee, A., & Kumar, V. (2009). *Anomaly detection: A survey*. ACM Computing Surveys, 41(3), 1-58. | Artículo | Algoritmo de sospecha (RN-06) |
+| F-11 | Brueggeman, W. B., & Fisher, J. D. (2011). *Real Estate Finance and Investments*. McGraw-Hill/Irwin. | Libro | Redistribución iterativa de caps (RN-07) |
+| F-12 | Burden, R. L., & Faires, J. D. (2010). *Numerical Analysis*. Cengage Learning. | Libro | Algoritmo iterativo de punto fijo (RN-07) |
+| F-13 | Leys, C., Ley, C., Klein, O., Bernard, P., & Licata, L. (2013). *Detecting outliers: Do not use standard deviation around the mean, use absolute deviation around the median*. Journal of Experimental Social Psychology, 49(4), 764-766. | Artículo | Z-Score robusto mediana + MAD (RN-06) |
+| F-14 | Liu, F. T., Ting, K. M., & Zhou, Z. H. (2008). *Isolation forest*. IEEE ICDM, pp. 413-422. | Artículo | Alternativa de detección de anomalías (RN-06) |
+| F-15 | Newman, S. (2015). *Building Microservices*. O'Reilly Media. | Libro | Idempotencia del motor de facturación (RN-13) |
+| F-16 | Anderson, R. (2020). *Security Engineering: A Guide to Building Dependable Distributed Systems*. Wiley. | Libro | Audit trail inmutable (RN-14) |
+| F-17 | Evans, E. (2003). *Domain-Driven Design: Tackling Complexity in the Heart of Software*. Addison-Wesley. | Libro | Control de versiones de contratos (RN-15) |
+| F-18 | Código Civil de Venezuela. Gaceta Oficial N° 2.990 Extraordinaria (1982). | Ley | Intereses punitorios (RN-10) |
+| F-19 | Pressman, R. S., & Maxim, B. R. *Ingeniería de Software: Un enfoque práctico* (9na ed.). | Libro | Marco de ingeniería de requisitos y ciclo de vida (sección 5) |
+| F-20 | Sommerville, I. (2016). *Software Engineering* (10ma ed.). | Libro | Modelado de sistemas y diseño arquitectónico (secciones 5 y 6) |
+| F-21 | Kendall, K. E., & Kendall, J. E. (2011). *Análisis y diseño de sistemas* (8va ed.). | Libro | TGS, técnicas de elicitación y viabilidad (secciones 1 y 5) |
+| F-22 | ISO/IEC/IEEE 42010:2022. *Software, systems and enterprise — Architecture description*. | Estándar | Stakeholders, preocupaciones y vistas arquitectónicas (sección 6) |
 
 ---
 
 
 ## 8. Próximos Pasos
 
-1. Completar el glosario (sección 3) con definición, fuente y relevancia para cada término.
-2. Cerrar las decisiones de la sección 4.1 en reunión de equipo.
-3. Redactar las reglas de negocio (sección 5) a partir de las decisiones cerradas.
+1. ~~Completar el glosario (sección 3) con definición, fuente y relevancia para cada término.~~ — **completado**.
+2. ~~Cerrar las decisiones de la sección 4.1 en reunión de equipo.~~ — **completado** (D-01 a D-10).
+3. ~~Redactar las reglas de negocio (sección 5) a partir de las decisiones cerradas.~~ — **completado** (RN-01 a RN-16).
 4. Validar riesgos y supuestos (sección 4.3) con la profesora o con material de la industria.
-5. Recién entonces: diseñar modelo de datos, endpoints y arquitectura.
+5. Diseñar modelo de datos, endpoints y arquitectura a partir de la matriz de trazabilidad (sección 5.6).

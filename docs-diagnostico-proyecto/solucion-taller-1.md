@@ -103,6 +103,22 @@ Desarrollo de los 4 subsistemas (Tenant Mix & Leasing, Control de Ventas/Auditor
 * **Operativa:** Altamente viable al sustituir hojas de cálculo propensas a errores por un flujo automatizado de trabajo.
 * **Económica:** ROI ampliamente justificado por la recuperación de ventas no declaradas y la eliminación de disputas legales por expensas.
 
+### 4.8. Fases del Ciclo de Vida (SDLC) y su materialización por incrementos
+
+Las **7 fases del SDLC de Kendall & Kendall** se usan como checklist de madurez y se articulan con las **5 actividades genéricas de Pressman** (comunicación, planeación, modelado, construcción, despliegue), que se repiten en cada sprint:
+
+| Fase (Kendall & Kendall) | Actividad (Pressman) | Artefacto / entregable en este proyecto |
+| :--- | :--- | :--- |
+| 1. Identificación de problemas, oportunidades y objetivos | Comunicación | Definición del problema, necesidad y visión (4.1, 4.2, 4.5) |
+| 2. Determinación de los requerimientos de información | Comunicación / Elicitación | Elicitación documental, glosario, decisiones D-01..D-10 y riesgos R-01..R-05 |
+| 3. Análisis de las necesidades del sistema | Modelado | Modelos de interacción UML, reglas RN-01..RN-16 y matriz de trazabilidad (sección 5.6) |
+| 4. Diseño del sistema recomendado | Modelado / Diseño | Arquitectura (Punto 6), modelo de datos y endpoints |
+| 5. Desarrollo y documentación del software | Construcción | Incrementos Scrum, código y documentación técnica |
+| 6. Prueba y mantenimiento del sistema | Construcción / Despliegue | Casos de prueba por regla RN, validación (5.e) y correcciones |
+| 7. Implementación y evaluación del sistema | Despliegue | Despliegue, capacitación, piloto y auditoría post-entrega |
+
+El ciclo **no** se ejecuta en cascada: se recorre completo dentro de cada incremento Scrum. Secuencia propuesta de incrementos: **I1** Contratos + canon dual (RN-01..RN-03, RN-09); **I2** Auditoría y anomalías (RN-04..RN-06); **I3** Prorrateo y caps (RN-07..RN-08); **I4** Cobranza, garantías y fondo (RN-10..RN-12). Las reglas transversales (RN-13..RN-16) se incorporan desde I1 por su carácter estructural.
+
 ---
 
 ## Punto 5. Fases de la Ingeniería de Requisitos
@@ -144,7 +160,13 @@ Estructurado bajo las **7 actividades del marco de Ingeniería de Requisitos de 
 * **5.e. Validación:**
   Revisión técnica mediante listas de comprobación y matriz de trazabilidad para verificar que las fórmulas no presenten ambigüedades.
 * **5.f. Administración de Requisitos:**
-  Control de cambios y versionado para gestionar la evolución del software ante adendas contractuales o reformas fiscales.
+  Se gestiona el ciclo de vida de cada requisito mediante los siguientes mecanismos:
+  - **Trazabilidad:** cada requisito se identifica (`D-01..D-10`, `RN-01..RN-16`, `R-01..R-05`) y se vincula a su fuente, a su regla de negocio y a su prueba, usando la matriz de trazabilidad de la sección 5.6 de [[Desglose del problema]].
+  - **Control de cambios:** toda adenda contractual o reforma fiscal se registra como solicitud de cambio; se evalúa su impacto sobre las reglas afectadas y se aprueba antes de modificar el backlog.
+  - **Versionado:** los requisitos y los contratos se versionan con vigencia; un cambio no sobrescribe la versión anterior, habilitando recálculos retroactivos correctos (RN-15).
+  - **Estados del requisito:** `propuesto → aprobado → en desarrollo → validado → obsoleto`, visibles en el Product Backlog.
+  - **Análisis de impacto:** cada cambio se traza a las reglas, pantallas, endpoints y pruebas afectadas antes de implementarse.
+  - **Registro y evidencia:** el Product Backlog y la matriz de trazabilidad son el registro maestro; el historial de cambios se conserva en el audit trail (RN-14).
 
 ---
 
